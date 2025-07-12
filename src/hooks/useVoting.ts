@@ -147,6 +147,9 @@ export const useVoting = () => {
   const updateNominee = (nomineeId: string, updates: Partial<Nominee>) => {
     setNominees(prev => {
       const newNominees = { ...prev };
+      
+      // Find the nominee to update
+      let updatedNominee: Nominee | null = null;
       Object.keys(newNominees).forEach(categoryId => {
         newNominees[categoryId] = newNominees[categoryId].map(nominee =>
           nominee.nomId === nomineeId ? { ...nominee, ...updates } : nominee
