@@ -7,6 +7,7 @@ export const useVoting = () => {
   // const [CategoryVote, setCategoryVote] = useState<Record<string, CategoryVote[]>>({});
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const baseurl = "https://02dde82182ce.ngrok-free.app";
 
   // Get or create voter ID
   const getVoterId = () => {
@@ -84,7 +85,7 @@ export const useVoting = () => {
 
   const addNomineetoMongo = async (nominee: Nominee) => {
   try {
-    const response = await fetch('http://localhost:8080/add/nominee', {
+    const response = await fetch('https://02dde82182ce.ngrok-free.app/add/nominee', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -112,7 +113,7 @@ export const useVoting = () => {
 };
 
   try {
-    const response = await fetch('http://localhost:8080/drm/add/nominee', {
+    const response = await fetch('https://02dde82182ce.ngrok-free.app/drm/add/nominee', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
