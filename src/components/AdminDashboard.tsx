@@ -14,7 +14,7 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const { nominees, addNominee, updateNominee, deleteNominee } = useVoting();
   const [categories] = useState<Category[]>(GALA_CATEGORIES);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showAddNominee, setShowAddNominee] = useState(false);
   const [showStats, setShowStats] = useState(true);
   const [editingNominee, setEditingNominee] = useState<string | null>(null);
@@ -76,7 +76,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleAddNominee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCategory || !newNominee.name.trim()) return;
+    if (newNominee.category_ids.length === 0 || !newNominee.name.trim()) return;
 
     setLoading(true);
     try {
@@ -406,7 +406,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       {category.icon} {category.title} ({nominees[category.title]?.length || 0})
                     </option>
                   ))}
-                </select>
+                </div>
               </div>
 
               {/* Add Nominee Form */}
@@ -415,14 +415,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <h4 className="text-base sm:text-lg font-semibold mb-4 text-gray-800">Add New Nominee</h4>
                   <form onSubmit={handleAddNominee} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm sm:text-base"
-                        required
-                      >
-                        <option value="">Select a category</option>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Select Categories * (Choose one or more)</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-3">
                         {categories.map((category) => (
                           <option key={category.categoryId} value={category.categoryId}>
                             {category.icon} {category.title}
@@ -468,14 +462,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                       <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || newNominee.category_ids.length === 0}
                         className="bg-gradient-to-r from-orange-400 to-yellow-400 text-white px-6 py-3 rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all disabled:opacity-50 shadow-lg text-sm sm:text-base"
                       >
                         {loading ? 'Adding...' : 'Add Nominee'}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowAddNominee(false)}
+                        onClick={() => {
+                          setShowAddNominee(false);
+                          setNewNominee({ name: '', description: '', photo_url: '', category_ids: [] });
+                        }}
                         className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-300 transition-all text-sm sm:text-base"
                       >
                         Cancel
@@ -487,6 +484,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
               {/* Nominees List */}
               <div className="space-y-3">
+                {selectedCategory !== 'all' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg">{categories.find(c => c.id === selectedCategory)?.icon}</span>
+                      <div>
+                        <h4 className="font-semibold text-blue-800">
+                          {categories.find(c => c.id === selectedCategory)?.name}
+                        </h4>
+                        <p className="text-sm text-blue-600">
+                          {categories.find(c => c.id === selectedCategory)?.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {filteredNominees.length > 0 ? (
                   filteredNominees.map((nominee) => (
                     <div key={nominee.nomId} className="border border-gray-200 rounded-xl p-3 sm:p-4 hover:border-orange-300 transition-all">
@@ -514,6 +526,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 text-sm sm:text-base"
                             placeholder="Photo URL"
                           />
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+                            <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                              {categories.map((category) => (
+                                <label key={category.id} className="flex items-center space-x-2 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    value={category.id}
+                                    checked={editNomineeData.category_ids.includes(category.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setEditNomineeData({ 
+                                          ...editNomineeData, 
+                                          category_ids: [...editNomineeData.category_ids, category.id] 
+                                        });
+                                      } else {
+                                        setEditNomineeData({ 
+                                          ...editNomineeData, 
+                                          category_ids: editNomineeData.category_ids.filter(id => id !== category.id) 
+                                        });
+                                      }
+                                    }}
+                                    className="text-orange-500 focus:ring-orange-400"
+                                  />
+                                  <span>{category.icon} {category.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleEditNominee(nominee.nomId)}
@@ -587,7 +628,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <div className="text-center py-8 text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-base sm:text-lg">
-                      {selectedCategory 
+                      {selectedCategory && selectedCategory !== 'all'
                         ? 'No nominees in this category yet.' 
                         : 'No nominees added yet.'
                       }
