@@ -85,7 +85,7 @@ export const useVoting = () => {
 
   const addNomineetoMongo = async (nominee: Nominee) => {
   try {
-    const response = await fetch('https://02dde82182ce.ngrok-free.app/add/nominee', {
+    const response = await fetch('https://02dde82182ce.ngrok-free.app/drm/add/nominee', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

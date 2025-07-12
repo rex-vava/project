@@ -29,7 +29,7 @@ export interface CategoryVote{
 let galaCategoriesCache: Category[] | null = null;
 
 export const fetchGalaCategories = async (): Promise<Category[]> => {
-const response = await fetch('http://localhost:8080/drm/all');
+const response = await fetch('https://02dde82182ce.ngrok-free.app/drm/all');
 const contentType = response.headers.get('content-type');
 
 if (!response.ok) {
