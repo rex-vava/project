@@ -30,12 +30,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     name: '',
     description: '',
     photo_url: '',
-    category_id: ''
+    category_ids: [] as string[]
   });
   const [editNomineeData, setEditNomineeData] = useState({
     name: '',
     description: '',
-    photo_url: ''
+    photo_url: '',
+    category_ids: [] as string[]
   });
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -77,19 +78,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleAddNominee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newNominee.category_id || !newNominee.name.trim()) return;
+    if (newNominee.category_ids.length === 0 || !newNominee.name.trim()) return;
 
     setLoading(true);
     try {
-      addNominee(newNominee.category_id, {
+      addNominee('', {
         name: newNominee.name.trim(),
         description: newNominee.description.trim() || undefined,
         photo_url: newNominee.photo_url.trim() || undefined,
-        category_id: newNominee.category_id,
+        category_ids: newNominee.category_ids,
         is_active: true
       });
 
-      setNewNominee({ name: '', description: '', photo_url: '', category_id: '' });
+      setNewNominee({ name: '', description: '', photo_url: '', category_ids: [] });
       setShowAddNominee(false);
     } catch (error) {
       console.error('Error adding nominee:', error);
@@ -108,6 +109,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         name: editNomineeData.name.trim(),
         description: editNomineeData.description.trim() || undefined,
         photo_url: editNomineeData.photo_url.trim() || undefined,
+        category_ids: editNomineeData.category_ids,
       });
 
       setEditingNominee(null);
@@ -124,13 +126,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setEditNomineeData({
       name: nominee.name,
       description: nominee.description || '',
-      photo_url: nominee.photo_url || ''
+      photo_url: nominee.photo_url || '',
+      category_ids: nominee.category_ids || []
     });
   };
 
   const cancelEditing = () => {
     setEditingNominee(null);
-    setEditNomineeData({ name: '', description: '', photo_url: '' });
+    setEditNomineeData({ name: '', description: '', photo_url: '', category_ids: [] });
   };
 
   const handleDeleteNominee = async (nomineeId: string) => {
@@ -147,7 +150,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const filteredNominees = selectedCategory 
     ? selectedCategory === 'all' 
       ? Object.values(nominees).flat()
-      : nominees[selectedCategory] || []
+      : Object.values(nominees).flat().filter(nominee => 
+          nominee.category_ids && nominee.category_ids.includes(selectedCategory)
+        )
     : Object.values(nominees).flat();
 
   const getCategoryVotes = (categoryId: string) => {
@@ -443,18 +448,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <h4 className="text-base sm:text-lg font-semibold mb-4 text-gray-800">Add New Nominee</h4>
                   <form onSubmit={handleAddNominee} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">Select Category *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Select Categories * (Choose one or more)</label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-3">
                         {categories.map((category) => (
                           <label key={category.id} className="flex items-center space-x-3 p-2 border border-gray-100 rounded-lg hover:border-orange-300 transition-all cursor-pointer">
                             <input
-                              type="radio"
-                              name="newNomineeCategory"
+                              type="checkbox"
                               value={category.id}
-                              checked={newNominee.category_id === category.id}
-                              onChange={(e) => setNewNominee({ ...newNominee, category_id: e.target.value })}
+                              checked={newNominee.category_ids.includes(category.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setNewNominee({ 
+                                    ...newNominee, 
+                                    category_ids: [...newNominee.category_ids, category.id] 
+                                  });
+                                } else {
+                                  setNewNominee({ 
+                                    ...newNominee, 
+                                    category_ids: newNominee.category_ids.filter(id => id !== category.id) 
+                                  });
+                                }
+                              }}
                               className="text-orange-500 focus:ring-orange-400"
-                              required
                             />
                             <div className="flex items-center space-x-2 min-w-0 flex-1">
                               <span className="text-base">{category.icon}</span>
@@ -507,7 +522,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                       <button
                         type="submit"
-                        disabled={loading || !newNominee.category_id}
+                        disabled={loading || newNominee.category_ids.length === 0}
                         className="bg-gradient-to-r from-orange-400 to-yellow-400 text-white px-6 py-3 rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all disabled:opacity-50 shadow-lg text-sm sm:text-base"
                       >
                         {loading ? 'Adding...' : 'Add Nominee'}
@@ -516,7 +531,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         type="button"
                         onClick={() => {
                           setShowAddNominee(false);
-                          setNewNominee({ name: '', description: '', photo_url: '', category_id: '' });
+                          setNewNominee({ name: '', description: '', photo_url: '', category_ids: [] });
                         }}
                         className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-300 transition-all text-sm sm:text-base"
                       >
@@ -571,6 +586,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 text-sm sm:text-base"
                             placeholder="Photo URL"
                           />
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+                            <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                              {categories.map((category) => (
+                                <label key={category.id} className="flex items-center space-x-2 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    value={category.id}
+                                    checked={editNomineeData.category_ids.includes(category.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setEditNomineeData({ 
+                                          ...editNomineeData, 
+                                          category_ids: [...editNomineeData.category_ids, category.id] 
+                                        });
+                                      } else {
+                                        setEditNomineeData({ 
+                                          ...editNomineeData, 
+                                          category_ids: editNomineeData.category_ids.filter(id => id !== category.id) 
+                                        });
+                                      }
+                                    }}
+                                    className="text-orange-500 focus:ring-orange-400"
+                                  />
+                                  <span>{category.icon} {category.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleEditNominee(nominee.id)}
@@ -616,10 +660,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                 <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{nominee.description}</p>
                               )}
                               <div className="flex items-center space-x-2 mt-1">
-                                <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
-                                  {categories.find(c => c.id === nominee.category_id)?.icon} {categories.find(c => c.id === nominee.category_id)?.name}
-                                </span>
-                                {categories.find(c => c.id === nominee.category_id)?.special_award && (
+                                {nominee.category_ids && nominee.category_ids.map(categoryId => {
+                                  const category = categories.find(c => c.id === categoryId);
+                                  return category ? (
+                                    <span key={categoryId} className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                                      {category.icon} {category.name}
+                                    </span>
+                                  ) : null;
+                                })}
+                                {nominee.category_ids && nominee.category_ids.some(catId => 
+                                  categories.find(c => c.id === catId)?.special_award
+                                ) && (
                                   <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
                                     Special Award
                                   </span>

@@ -87,10 +87,17 @@ export const useVoting = () => {
       created_at: new Date().toISOString()
     };
 
-    setNominees(prev => ({
-      ...prev,
-      [categoryId]: [...(prev[categoryId] || []), newNominee]
-    }));
+    // Add nominee to all specified categories
+    setNominees(prev => {
+      const newNominees = { ...prev };
+      newNominee.category_ids.forEach(catId => {
+        if (!newNominees[catId]) {
+          newNominees[catId] = [];
+        }
+        newNominees[catId] = [...newNominees[catId], newNominee];
+      });
+      return newNominees;
+    });
 
     // Save to localStorage for persistence
     const allNominees = Object.values(nominees).flat();
@@ -103,11 +110,31 @@ export const useVoting = () => {
   const updateNominee = (nomineeId: string, updates: Partial<Nominee>) => {
     setNominees(prev => {
       const newNominees = { ...prev };
+      
+      // Find the nominee to update
+      let updatedNominee: Nominee | null = null;
       Object.keys(newNominees).forEach(categoryId => {
-        newNominees[categoryId] = newNominees[categoryId].map(nominee =>
-          nominee.id === nomineeId ? { ...nominee, ...updates } : nominee
-        );
+        const nomineeIndex = newNominees[categoryId].findIndex(n => n.id === nomineeId);
+        if (nomineeIndex !== -1) {
+          updatedNominee = { ...newNominees[categoryId][nomineeIndex], ...updates };
+        }
       });
+      
+      if (updatedNominee) {
+        // Remove nominee from all categories first
+        Object.keys(newNominees).forEach(categoryId => {
+          newNominees[categoryId] = newNominees[categoryId].filter(n => n.id !== nomineeId);
+        });
+        
+        // Add nominee to new categories
+        updatedNominee.category_ids.forEach(catId => {
+          if (!newNominees[catId]) {
+            newNominees[catId] = [];
+          }
+          newNominees[catId] = [...newNominees[catId], updatedNominee];
+        });
+      }
+      
       return newNominees;
     });
 

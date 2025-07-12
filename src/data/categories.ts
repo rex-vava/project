@@ -12,7 +12,7 @@ export interface Category {
 export interface Nominee {
   id: string;
   name: string;
-  category_id: string;
+  category_ids: string[];
   photo_url?: string;
   description?: string;
   is_active: boolean;
