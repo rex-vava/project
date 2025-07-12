@@ -14,7 +14,7 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const { nominees, addNominee, updateNominee, deleteNominee } = useVoting();
   const [categories] = useState<Category[]>(GALA_CATEGORIES);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showAddNominee, setShowAddNominee] = useState(false);
   const [showStats, setShowStats] = useState(true);
   const [editingNominee, setEditingNominee] = useState<string | null>(null);
@@ -29,7 +29,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [newNominee, setNewNominee] = useState({
     name: '',
     description: '',
-    photo_url: ''
+    photo_url: '',
+    category_id: ''
   });
   const [editNomineeData, setEditNomineeData] = useState({
     name: '',
@@ -76,19 +77,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleAddNominee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCategory || !newNominee.name.trim()) return;
+    if (!newNominee.category_id || !newNominee.name.trim()) return;
 
     setLoading(true);
     try {
-      addNominee(selectedCategory, {
+      addNominee(newNominee.category_id, {
         name: newNominee.name.trim(),
         description: newNominee.description.trim() || undefined,
         photo_url: newNominee.photo_url.trim() || undefined,
-        category_id: selectedCategory,
+        category_id: newNominee.category_id,
         is_active: true
       });
 
-      setNewNominee({ name: '', description: '', photo_url: '' });
+      setNewNominee({ name: '', description: '', photo_url: '', category_id: '' });
       setShowAddNominee(false);
     } catch (error) {
       console.error('Error adding nominee:', error);
@@ -144,7 +145,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const filteredNominees = selectedCategory 
-    ? nominees[selectedCategory] || []
+    ? selectedCategory === 'all' 
+      ? Object.values(nominees).flat()
+      : nominees[selectedCategory] || []
     : Object.values(nominees).flat();
 
   const getCategoryVotes = (categoryId: string) => {
@@ -391,20 +394,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </button>
               </div>
 
-              {/* Category Filter */}
-              <div className="mb-4">
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm sm:text-base"
-                >
-                  <option value="">All Categories ({Object.values(nominees).flat().length} nominees)</option>
+              {/* Category Filter - Radio Buttons */}
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Filter by Category:</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-xl hover:border-orange-300 transition-all cursor-pointer">
+                    <input
+                      type="radio"
+                      name="categoryFilter"
+                      value="all"
+                      checked={selectedCategory === 'all'}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="text-orange-500 focus:ring-orange-400"
+                    />
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <span className="text-lg">🎯</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-medium text-gray-800">All Categories</span>
+                        <div className="text-xs text-gray-500">({Object.values(nominees).flat().length} nominees)</div>
+                      </div>
+                    </div>
+                  </label>
                   {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.icon} {category.name} ({nominees[category.id]?.length || 0})
-                    </option>
+                    <label key={category.id} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-xl hover:border-orange-300 transition-all cursor-pointer">
+                      <input
+                        type="radio"
+                        name="categoryFilter"
+                        value={category.id}
+                        checked={selectedCategory === category.id}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="text-orange-500 focus:ring-orange-400"
+                      />
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <span className="text-lg">{category.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-sm font-medium text-gray-800 truncate block">{category.name}</span>
+                          <div className="text-xs text-gray-500">({nominees[category.id]?.length || 0} nominees)</div>
+                        </div>
+                      </div>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
               {/* Add Nominee Form */}
@@ -413,20 +443,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <h4 className="text-base sm:text-lg font-semibold mb-4 text-gray-800">Add New Nominee</h4>
                   <form onSubmit={handleAddNominee} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm sm:text-base"
-                        required
-                      >
-                        <option value="">Select a category</option>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Select Category *</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-3">
                         {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.icon} {category.name}
-                          </option>
+                          <label key={category.id} className="flex items-center space-x-3 p-2 border border-gray-100 rounded-lg hover:border-orange-300 transition-all cursor-pointer">
+                            <input
+                              type="radio"
+                              name="newNomineeCategory"
+                              value={category.id}
+                              checked={newNominee.category_id === category.id}
+                              onChange={(e) => setNewNominee({ ...newNominee, category_id: e.target.value })}
+                              className="text-orange-500 focus:ring-orange-400"
+                              required
+                            />
+                            <div className="flex items-center space-x-2 min-w-0 flex-1">
+                              <span className="text-base">{category.icon}</span>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-sm font-medium text-gray-800 truncate block">{category.name}</span>
+                                {category.special_award && (
+                                  <span className="text-xs text-orange-600 bg-orange-100 px-1 py-0.5 rounded">Special Award</span>
+                                )}
+                              </div>
+                            </div>
+                          </label>
                         ))}
-                      </select>
+                      </div>
                     </div>
 
                     <div>
@@ -466,14 +507,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                       <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !newNominee.category_id}
                         className="bg-gradient-to-r from-orange-400 to-yellow-400 text-white px-6 py-3 rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all disabled:opacity-50 shadow-lg text-sm sm:text-base"
                       >
                         {loading ? 'Adding...' : 'Add Nominee'}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowAddNominee(false)}
+                        onClick={() => {
+                          setShowAddNominee(false);
+                          setNewNominee({ name: '', description: '', photo_url: '', category_id: '' });
+                        }}
                         className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-300 transition-all text-sm sm:text-base"
                       >
                         Cancel
@@ -485,6 +529,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
               {/* Nominees List */}
               <div className="space-y-3">
+                {selectedCategory !== 'all' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg">{categories.find(c => c.id === selectedCategory)?.icon}</span>
+                      <div>
+                        <h4 className="font-semibold text-blue-800">
+                          {categories.find(c => c.id === selectedCategory)?.name}
+                        </h4>
+                        <p className="text-sm text-blue-600">
+                          {categories.find(c => c.id === selectedCategory)?.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {filteredNominees.length > 0 ? (
                   filteredNominees.map((nominee) => (
                     <div key={nominee.id} className="border border-gray-200 rounded-xl p-3 sm:p-4 hover:border-orange-300 transition-all">
@@ -556,9 +615,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                               {nominee.description && (
                                 <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{nominee.description}</p>
                               )}
-                              <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full inline-block mt-1">
-                                {categories.find(c => c.id === nominee.category_id)?.name}
-                              </span>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                                  {categories.find(c => c.id === nominee.category_id)?.icon} {categories.find(c => c.id === nominee.category_id)?.name}
+                                </span>
+                                {categories.find(c => c.id === nominee.category_id)?.special_award && (
+                                  <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                                    Special Award
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex space-x-1 flex-shrink-0">
@@ -585,7 +651,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <div className="text-center py-8 text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-base sm:text-lg">
-                      {selectedCategory 
+                      {selectedCategory && selectedCategory !== 'all'
                         ? 'No nominees in this category yet.' 
                         : 'No nominees added yet.'
                       }
