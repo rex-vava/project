@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { GALA_CATEGORIES, SAMPLE_NOMINEES, Category, Nominee } from '../data/categories';
+import { GALA_CATEGORIES, SAMPLE_NOMINEES,SAMPLE_CATEG_VOTES ,Category, Nominee, CategoryVote } from '../data/categories';
 
 export const useVoting = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [nominees, setNominees] = useState<Record<string, Nominee[]>>({});
+  // const [CategoryVote, setCategoryVote] = useState<Record<string, CategoryVote[]>>({});
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -24,7 +25,7 @@ export const useVoting = () => {
     // Initialize nominees structure
     const nomineesMap: Record<string, Nominee[]> = {};
     GALA_CATEGORIES.forEach(category => {
-      nomineesMap[category.id] = SAMPLE_NOMINEES.filter(nominee => nominee.category_id === category.id);
+      nomineesMap[category.categoryId] = SAMPLE_NOMINEES.filter(nominee => nominee.nomId === category.categoryId);
     });
     setNominees(nomineesMap);
 
@@ -80,12 +81,55 @@ export const useVoting = () => {
     }
   };
 
-  const addNominee = (categoryId: string, nominee: Omit<Nominee, 'id' | 'created_at'>) => {
+
+  const addNomineetoMongo = async (nominee: Nominee) => {
+  try {
+    const response = await fetch('http://localhost:8080/add/nominee', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(nominee),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to add nominee');
+    }
+
+    const result = await response.json();
+    console.log('Nominee added:', result);
+    return result;
+  } catch (error) {
+    console.error('Error adding nominee:', error);
+  }
+};
+
+  const addNominee = async (categoryId: string, nominee: Omit<Nominee, 'id' | 'created_at'>) => {
     const newNominee: Nominee = {
       ...nominee,
-      id: `nominee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      created_at: new Date().toISOString()
-    };
+      nomId: `nominee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      // created_at: new Date().toISOString()
+};
+
+  try {
+    const response = await fetch('http://localhost:8080/drm/add/nominee', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(nominee),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to add nominee');
+    }
+
+    const result = await response.json();
+    console.log('Nominee added:', result);
+    return result;
+  } catch (error) {
+    console.error('Error adding nominee:', error);
+  }
 
     setNominees(prev => ({
       ...prev,
@@ -105,7 +149,7 @@ export const useVoting = () => {
       const newNominees = { ...prev };
       Object.keys(newNominees).forEach(categoryId => {
         newNominees[categoryId] = newNominees[categoryId].map(nominee =>
-          nominee.id === nomineeId ? { ...nominee, ...updates } : nominee
+          nominee.nomId === nomineeId ? { ...nominee, ...updates } : nominee
         );
       });
       return newNominees;
@@ -120,7 +164,7 @@ export const useVoting = () => {
     setNominees(prev => {
       const newNominees = { ...prev };
       Object.keys(newNominees).forEach(categoryId => {
-        newNominees[categoryId] = newNominees[categoryId].filter(nominee => nominee.id !== nomineeId);
+        newNominees[categoryId] = newNominees[categoryId].filter(nominee => nominee.nomId !== nomineeId);
       });
       return newNominees;
     });

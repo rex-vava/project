@@ -4,7 +4,7 @@ import {
   User, Save, X, BarChart3, TrendingUp, Clock, Award, Smartphone,
   Monitor, Tablet, RefreshCw, Activity
 } from 'lucide-react';
-import { GALA_CATEGORIES, Category, Nominee } from '../data/categories';
+import { GALA_CATEGORIES, CategoryVote ,Category, Nominee, NomineeRef } from '../data/categories';
 import { useVoting } from '../hooks/useVoting';
 
 interface AdminDashboardProps {
@@ -28,13 +28,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   });
   const [newNominee, setNewNominee] = useState({
     name: '',
-    description: '',
-    photo_url: ''
+    photo_url: '',
+    categories: []
   });
   const [editNomineeData, setEditNomineeData] = useState({
     name: '',
-    description: '',
-    photo_url: ''
+    photo_url: '',
+    categories: []
   });
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -81,19 +81,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setLoading(true);
     try {
       addNominee(selectedCategory, {
+        nomId: `nominee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: newNominee.name.trim(),
-        description: newNominee.description.trim() || undefined,
-        photo_url: newNominee.photo_url.trim() || undefined,
-        category_id: selectedCategory,
-        is_active: true
+        photo: newNominee.photo_url.trim() || undefined,
+        categories: [ {categId: "CAT-01",vote: 0}
+],
       });
 
-      setNewNominee({ name: '', description: '', photo_url: '' });
+      setNewNominee({ name: '', photo_url: '', categories:[] });
       setShowAddNominee(false);
     } catch (error) {
       console.error('Error adding nominee:', error);
       alert('Error adding nominee. Please try again.');
-    } finally {
+    } 
+
+ finally {
       setLoading(false);
     }
   };
@@ -105,8 +107,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     try {
       updateNominee(nomineeId, {
         name: editNomineeData.name.trim(),
-        description: editNomineeData.description.trim() || undefined,
-        photo_url: editNomineeData.photo_url.trim() || undefined,
+        // description: editNomineeData.description.trim() || undefined,
+        photo: editNomineeData.photo_url.trim() || undefined,
       });
 
       setEditingNominee(null);
@@ -119,17 +121,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const startEditing = (nominee: Nominee) => {
-    setEditingNominee(nominee.id);
+    setEditingNominee(nominee.nomId);
     setEditNomineeData({
       name: nominee.name,
-      description: nominee.description || '',
-      photo_url: nominee.photo_url || ''
+      photo_url: nominee.photo || '',
+      categories: []
     });
   };
 
   const cancelEditing = () => {
     setEditingNominee(null);
-    setEditNomineeData({ name: '', description: '', photo_url: '' });
+    setEditNomineeData({ name: '', photo_url: '', categories:[] });
   };
 
   const handleDeleteNominee = async (nomineeId: string) => {
@@ -144,7 +146,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const filteredNominees = selectedCategory 
-    ? nominees[selectedCategory] || []
+    ? nominees[""] || []
     : Object.values(nominees).flat();
 
   const getCategoryVotes = (categoryId: string) => {
@@ -276,17 +278,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               </h3>
               <div className="grid gap-3 sm:gap-4">
                 {categories.map((category) => {
-                  const categoryVotes = getCategoryVotes(category.id);
-                  const categoryNominees = nominees[category.id]?.length || 0;
+                  const categoryVotes = getCategoryVotes(category.categoryId);
+                  const categoryNominees = category.nominees.length || 0;
                   
                   return (
-                    <div key={category.id} className="border border-gray-200 rounded-xl p-3 sm:p-4 hover:border-orange-300 transition-all">
+                    <div key={category.categoryId} className="border border-gray-200 rounded-xl p-3 sm:p-4 hover:border-orange-300 transition-all">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3 min-w-0 flex-1">
                           <span className="text-xl sm:text-2xl flex-shrink-0">{category.icon}</span>
                           <div className="min-w-0 flex-1">
-                            <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{category.name}</h4>
-                            {category.special_award && (
+                            <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{category.title}</h4>
+                            {category.isAward && (
                               <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Special Award</span>
                             )}
                           </div>
@@ -394,14 +396,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               {/* Category Filter */}
               <div className="mb-4">
                 <select
-                  value={selectedCategory}
+                  value={selectedCategory} 
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm sm:text-base"
                 >
                   <option value="">All Categories ({Object.values(nominees).flat().length} nominees)</option>
                   {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.icon} {category.name} ({nominees[category.id]?.length || 0})
+                    <option key={category.categoryId} value={category.categoryId}>
+                      {category.icon} {category.title} ({nominees[category.title]?.length || 0})
                     </option>
                   ))}
                 </select>
@@ -422,11 +424,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       >
                         <option value="">Select a category</option>
                         {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.icon} {category.name}
+                          <option key={category.categoryId} value={category.categoryId}>
+                            {category.icon} {category.title}
                           </option>
                         ))}
-                      </select>
+                      </select> 
                     </div>
 
                     <div>
@@ -441,16 +443,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       />
                     </div>
 
-                    <div>
+                    {/* <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
                       <textarea
-                        value={newNominee.description}
-                        onChange={(e) => setNewNominee({ ...newNominee, description: e.target.value })}
+                        // value={newNominee.description}
+                        // onChange={(e) => setNewNominee({ ...newNominee, description: e.target.value })}
                         className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm sm:text-base"
                         rows={3}
                         placeholder="Enter nominee description"
                       />
-                    </div>
+                    </div> */}
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Photo URL (Optional)</label>
@@ -487,8 +489,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               <div className="space-y-3">
                 {filteredNominees.length > 0 ? (
                   filteredNominees.map((nominee) => (
-                    <div key={nominee.id} className="border border-gray-200 rounded-xl p-3 sm:p-4 hover:border-orange-300 transition-all">
-                      {editingNominee === nominee.id ? (
+                    <div key={nominee.nomId} className="border border-gray-200 rounded-xl p-3 sm:p-4 hover:border-orange-300 transition-all">
+                      {editingNominee === nominee.nomId ? (
                         // Edit Mode
                         <div className="space-y-3">
                           <input
@@ -499,8 +501,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             placeholder="Nominee name"
                           />
                           <textarea
-                            value={editNomineeData.description}
-                            onChange={(e) => setEditNomineeData({ ...editNomineeData, description: e.target.value })}
+                            value={editNomineeData.name}
+                            onChange={(e) => setEditNomineeData({ ...editNomineeData, name: e.target.value })}
                             className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 text-sm sm:text-base"
                             rows={2}
                             placeholder="Description"
@@ -514,7 +516,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           />
                           <div className="flex space-x-2">
                             <button
-                              onClick={() => handleEditNominee(nominee.id)}
+                              onClick={() => handleEditNominee(nominee.nomId)}
                               disabled={loading}
                               className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-all flex items-center space-x-1 text-sm"
                             >
@@ -535,9 +537,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3 min-w-0 flex-1">
                             <div className="flex-shrink-0">
-                              {nominee.photo_url ? (
+                              {nominee.photo ? (
                                 <img
-                                  src={nominee.photo_url}
+                                  src={nominee.photo}
                                   alt={nominee.name}
                                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-orange-200"
                                   onError={(e) => {
@@ -547,17 +549,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                   }}
                                 />
                               ) : null}
-                              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center text-white ${nominee.photo_url ? 'hidden' : ''}`}>
+                              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center text-white ${nominee.photo ? 'hidden' : ''}`}>
                                 <User className="w-5 h-5 sm:w-6 sm:h-6" />
                               </div>
                             </div>
                             <div className="min-w-0 flex-1">
                               <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{nominee.name}</h4>
-                              {nominee.description && (
+                              {/* {nominee.description && (
                                 <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{nominee.description}</p>
-                              )}
+                              )} */}
                               <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full inline-block mt-1">
-                                {categories.find(c => c.id === nominee.category_id)?.name}
+                                {/* {categories.find(c => c.categoryId === selectedCategory.)?.title} */}
                               </span>
                             </div>
                           </div>
@@ -570,7 +572,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDeleteNominee(nominee.id)}
+                              onClick={() => handleDeleteNominee(nominee.nomId)}
                               className="text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all"
                               title="Delete nominee"
                             >

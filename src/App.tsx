@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Settings, Smartphone } from 'lucide-react';
+import { NomineeRef } from './data/categories';
 
 // Components
 import Header from './components/Header';
@@ -72,9 +73,9 @@ const VotingPage: React.FC = () => {
             <div className="grid gap-4 sm:gap-6">
               {categories.map((category) => (
                 <CategoryCard
-                  key={category.id}
+                  key={category.categoryId}
                   category={category}
-                  nominees={nominees[category.id] || []}
+                  nominees={category.nominees || []}
                   onVote={handleVote}
                   userVotes={userVotes}
                 />

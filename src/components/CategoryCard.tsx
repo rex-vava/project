@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { ChevronRight, Users, Check, User, Trophy } from 'lucide-react';
-import { Category, Nominee } from '../data/categories';
+import { Category, Nominee, NomineeRef } from '../data/categories';
 
 interface CategoryCardProps {
   category: Category;
-  nominees: Nominee[];
+  nominees: NomineeRef[];
   onVote: (categoryId: string, nomineeId: string) => void;
   userVotes: Record<string, string>;
 }
@@ -12,10 +12,10 @@ interface CategoryCardProps {
 const CategoryCard: React.FC<CategoryCardProps> = ({ category, nominees, onVote, userVotes }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const hasVoted = userVotes[category.id];
+  const hasVoted = userVotes[category.categoryId];
 
   const handleVote = (nomineeId: string) => {
-    onVote(category.id, nomineeId);
+    onVote(category.categoryId, nomineeId);
   };
 
   return (
@@ -31,13 +31,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, nominees, onVote,
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-base sm:text-xl font-bold text-gray-800 leading-tight mb-1">
-                {category.name}
+                {category.title}
               </h3>
               <p className="text-gray-600 text-xs sm:text-sm line-clamp-2 leading-relaxed">
                 {category.description}
               </p>
               <div className="flex items-center space-x-2 mt-2">
-                {category.special_award && (
+                {category.isAward && (
                   <span className="inline-flex items-center bg-gradient-to-r from-orange-400 to-yellow-400 text-white text-xs px-2 py-1 rounded-full font-medium">
                     <Trophy className="w-3 h-3 mr-1" />
                     Special Award
@@ -83,9 +83,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, nominees, onVote,
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                         <div className="flex-shrink-0">
-                          {nominee.photo_url ? (
+                          {nominee.name ? (
                             <img 
-                              src={nominee.photo_url} 
+                              src={nominee.id} 
                               alt={nominee.name}
                               className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-3 border-white shadow-lg"
                               onError={(e) => {
@@ -95,7 +95,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, nominees, onVote,
                               }}
                             />
                           ) : null}
-                          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center text-white shadow-lg ${nominee.photo_url ? 'hidden' : ''}`}>
+                          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center text-white shadow-lg ${nominee.id ? 'hidden' : ''}`}>
                             <User className="w-6 h-6 sm:w-7 sm:h-7" />
                           </div>
                         </div>
@@ -103,11 +103,11 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, nominees, onVote,
                           <h4 className="font-bold text-gray-800 text-sm sm:text-base leading-tight">
                             {nominee.name}
                           </h4>
-                          {nominee.description && (
+                          {/* {nominee.description && (
                             <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-3 leading-relaxed">
                               {nominee.description}
                             </p>
-                          )}
+                          )} */}
                         </div>
                       </div>
                       <button
