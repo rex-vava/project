@@ -4,7 +4,7 @@ import {
   User, Save, X, BarChart3, TrendingUp, Clock, Award, Smartphone,
   Monitor, Tablet, RefreshCw, Activity
 } from 'lucide-react';
-import { GALA_CATEGORIES,SAMPLE_NOMINEESREF , GALA_NOMINEES,CategoryVote ,Category, Nominee, NomineeRef } from '../data/categories';
+import { GALA_CATEGORIES, CategoryVote ,Category, Nominee, NomineeRef } from '../data/categories';
 import { useVoting } from '../hooks/useVoting';
 
 interface AdminDashboardProps {
@@ -13,25 +13,10 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const { nominees, addNominee, updateNominee, deleteNominee } = useVoting();
-  const [allNominees] = useState<Nominee[]>(GALA_NOMINEES);
   const [categories] = useState<Category[]>(GALA_CATEGORIES);
-  const [NomineeRef] = useState<NomineeRef[]>(SAMPLE_NOMINEESREF);
-  const [selectedCategory, setSelectedCategory] = useState<CategoryVote[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showAddNominee, setShowAddNominee] = useState(false);
   const [showStats, setShowStats] = useState(true);
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-  const categoryId = e.target.value;setSelectedCategories(categoryId);
-  // const allTotalVotes = categories.reduce((sum, category) => sum + category.totalVotes, 0);
-
-
-
-  // Only add if not already selected
-  if (categoryId && !selectedCategory.some(c => c.categId === categoryId)) {
-    setSelectedCategory(prev => [...prev, { categId: categoryId, vote: 0 }]);
-  }
-};
-
   const [editingNominee, setEditingNominee] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'nominees' | 'analytics'>('overview');
   const [stats, setStats] = useState({ 
@@ -78,7 +63,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     
     const categoriesWithVotes = new Set(votes.map((vote: any) => vote.category_id)).size;
     const totalNominees = Object.values(nominees).reduce((total, categoryNominees) => total + categoryNominees.length, 0);
-
     
     // Simulate device breakdown (in real MongoDB implementation, this would come from user agent data)
     const deviceBreakdown = {
@@ -100,7 +84,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         nomId: `nominee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: newNominee.name.trim(),
         photo: newNominee.photo_url.trim() || undefined,
-        categories: [{categId:selectedCategories,vote:0}]
+        categories: [ {categId: "CAT-01",vote: 0}
+],
       });
 
       setNewNominee({ name: '', photo_url: '', categories:[] });
@@ -159,8 +144,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       alert('Error deleting nominee. Please try again.');
     }
   };
-  const filteredNominees = selectedCategories? allNominees.filter(nominee => nominee.categories.some(cat => cat.categId === selectedCategories)) : allNominees;
-  const allTotalVotes = categories.reduce((sum, category) => sum + category.totalVotes, 0,);
+
+  const filteredNominees = selectedCategory ? nominees[""] || []: Object.values(nominees).flat();
 
   const getCategoryVotes = (categoryId: string) => {
     const savedVotes = localStorage.getItem('dac_all_votes');
@@ -260,7 +245,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
                   <Activity className="w-4 h-4 text-green-500 animate-pulse" />
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-blue-600">{allNominees.length}</div>
+                <div className="text-2xl sm:text-3xl font-bold text-blue-600">{stats.totalNominees}</div>
                 <div className="text-gray-600 text-xs sm:text-sm">Nominees</div>
               </div>
 
@@ -269,7 +254,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <Award className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />
                   <Activity className="w-4 h-4 text-green-500 animate-pulse" />
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-green-600">{allTotalVotes}</div>
+                <div className="text-2xl sm:text-3xl font-bold text-green-600">{stats.totalVotes}</div>
                 <div className="text-gray-600 text-xs sm:text-sm">Total Votes</div>
               </div>
 
@@ -312,7 +297,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             <div className="text-xs text-gray-500">Nominees</div>
                           </div>
                           <div>
-                            <div className="text-lg sm:text-xl font-bold text-green-600">{category.totalVotes}</div>
+                            <div className="text-lg sm:text-xl font-bold text-green-600">{categoryVotes}</div>
                             <div className="text-xs text-gray-500">Votes</div>
                           </div>
                         </div>
@@ -339,19 +324,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <Smartphone className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-blue-500" />
                   <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.deviceBreakdown.mobile}</div>
                   <div className="text-xs sm:text-sm text-gray-600">Mobile</div>
-                  <div className="text-xs text-blue-500">{allTotalVotes > 0 ? Math.round((stats.deviceBreakdown.mobile / allTotalVotes) * 100) : 0}%</div>
+                  <div className="text-xs text-blue-500">{stats.totalVotes > 0 ? Math.round((stats.deviceBreakdown.mobile / stats.totalVotes) * 100) : 0}%</div>
                 </div>
                 <div className="text-center">
                   <Monitor className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-green-500" />
                   <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.deviceBreakdown.desktop}</div>
                   <div className="text-xs sm:text-sm text-gray-600">Desktop</div>
-                  <div className="text-xs text-green-500">{allTotalVotes > 0 ? Math.round((stats.deviceBreakdown.desktop / allTotalVotes) * 100) : 0}%</div>
+                  <div className="text-xs text-green-500">{stats.totalVotes > 0 ? Math.round((stats.deviceBreakdown.desktop / stats.totalVotes) * 100) : 0}%</div>
                 </div>
                 <div className="text-center">
                   <Tablet className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-purple-500" />
                   <div className="text-xl sm:text-2xl font-bold text-purple-600">{stats.deviceBreakdown.tablet}</div>
                   <div className="text-xs sm:text-sm text-gray-600">Tablet</div>
-                  <div className="text-xs text-purple-500">{allTotalVotes > 0 ? Math.round((stats.deviceBreakdown.tablet / allTotalVotes) * 100) : 0}%</div>
+                  <div className="text-xs text-purple-500">{stats.totalVotes > 0 ? Math.round((stats.deviceBreakdown.tablet / stats.totalVotes) * 100) : 0}%</div>
                 </div>
               </div>
             </div>
@@ -406,20 +391,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </button>
               </div>
 
-              {/* Category Filter  */   } 
+              {/* Category Filter */}
               <div className="mb-4">
                 <select
-                  value={selectedCategories} 
-                  onChange={(e) => setSelectedCategories(e.target.value)}
+                  value={selectedCategory} 
+                  onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm sm:text-base"
                 >
-                  <option value="">All Categories ({allNominees.length} nominees)</option>
+                  <option value="">All Categories ({Object.values(nominees).flat().length} nominees)</option>
                   {categories.map((category) => (
-                    <option key={category.categoryId} 
-                    value={category.categoryId}>
-                      {category.icon} 
-                      {category.title} 
-                      ({category.nominees.length})
+                    <option key={category.categoryId} value={category.categoryId}>
+                      {category.icon} {category.title} ({nominees[category.title]?.length || 0})
                     </option>
                   ))}
                 </select>
@@ -433,17 +415,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
                       <select
-                        value ={selectedCategories}
-                        onChange={handleCategoryChange}
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm sm:text-base"
                         required
                       >
                         <option value="">Select a category</option>
                         {categories.map((category) => (
-                          <option key={category.categoryId} 
-                          value={category.categoryId}>
-                            {category.icon} 
-                            {category.title}
+                          <option key={category.categoryId} value={category.categoryId}>
+                            {category.icon} {category.title}
                           </option>
                         ))}
                       </select> 

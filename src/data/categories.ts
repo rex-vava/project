@@ -6,6 +6,7 @@ export interface Category {
   icon: string;
   isAward: boolean;
   nominees: NomineeRef[];
+  totalVotes: number
 }
 
 export interface NomineeRef {
@@ -28,8 +29,10 @@ export interface CategoryVote{
 
 let galaCategoriesCache: Category[] | null = null;
 
+let allTheNomineesCache: Nominee[] | null = null;
+
 export const fetchGalaCategories = async (): Promise<Category[]> => {
-const response = await fetch('https://02dde82182ce.ngrok-free.app/drm/all');
+const response = await fetch('https://galabackend.onrender.com/drm/all');
 const contentType = response.headers.get('content-type');
 
 if (!response.ok) {
@@ -48,13 +51,37 @@ if (contentType && contentType.includes('application/json')) {
 }
 };
 
+export const fetchGalaNominees = async (): Promise<Nominee[]> => {
+const response = await fetch('https://galabackend.onrender.com/drm/all/nom');
+const contentType = response.headers.get('content-type');
+
+if (!response.ok) {
+  throw new Error('Failed to fetch categories');
+}
+
+if (contentType && contentType.includes('application/json')) {
+  const data = await response.json();
+  allTheNomineesCache = data as Nominee[];
+  console.log("my fetched data:",data)
+  return allTheNomineesCache;
+} else {
+  const text = await response.text();
+  console.error('Expected JSON but got:', text);
+  throw new Error('Invalid response format');
+}
+};
+
 export const GALA_CATEGORIES = await fetchGalaCategories();
+
+export const GALA_NOMINEES = await fetchGalaNominees();
 
 
 // Sample nominees data structure (empty for now, can be populated later)
 export const SAMPLE_NOMINEES: Nominee[] = [];
 
 export const SAMPLE_CATEG_VOTES: CategoryVote[] = [];
+
+export const SAMPLE_NOMINEESREF: NomineeRef[] = [];
 
 // Helper functions
 export const getCategoryById = (id: string): Category | undefined => {
@@ -72,3 +99,7 @@ export const getSpecialAwards = (): Category[] => {
 export const getRegularAwards = (): Category[] => {
   return GALA_CATEGORIES.filter(category => !category.isAward);
 };
+
+// export const getNominees = (): NomineeRef[] => {
+//   return SAMPLE_NOMINEESREF.filter(nomineeRef => nomineeRef.id === category)
+// }

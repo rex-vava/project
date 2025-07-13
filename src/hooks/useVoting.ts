@@ -7,7 +7,6 @@ export const useVoting = () => {
   // const [CategoryVote, setCategoryVote] = useState<Record<string, CategoryVote[]>>({});
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const baseurl = "https://02dde82182ce.ngrok-free.app";
 
   // Get or create voter ID
   const getVoterId = () => {
@@ -70,6 +69,31 @@ export const useVoting = () => {
         timestamp: new Date().toISOString()
       };
 
+
+
+ const response = await fetch("https://galabackend.onrender.com/drm/vote", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    nomineeId: nomineeId,
+    categoryId: categoryId,
+  }),
+});
+
+ 
+ 
+//  await fetch(`https://galabackend.onrender.com/drm/vote?nomineeId=${nomineeId}&categoryId=${categoryId}`, {
+// method: 'POST'
+//  });
+
+ if (!response.ok) {
+ const errorText = await response.text();
+throw new Error(`Error: ${response.status} - ${errorText}`);
+ }
+
+
       // Save individual vote for MongoDB migration
       const existingVotes = JSON.parse(localStorage.getItem('dac_all_votes') || '[]');
       existingVotes.push(voteData);
@@ -82,30 +106,7 @@ export const useVoting = () => {
     }
   };
 
-
-  const addNomineetoMongo = async (nominee: Nominee) => {
-  try {
-    const response = await fetch('https://02dde82182ce.ngrok-free.app/drm/add/nominee', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(nominee),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to add nominee');
-    }
-
-    const result = await response.json();
-    console.log('Nominee added:', result);
-    return result;
-  } catch (error) {
-    console.error('Error adding nominee:', error);
-  }
-};
-
-  const addNominee = async (categoryId: string, nominee: Omit<Nominee, 'id' | 'created_at'>) => {
+  const addNominee = async (nominee: Omit<Nominee, 'id' | 'created_at'>) => {
     const newNominee: Nominee = {
       ...nominee,
       nomId: `nominee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -113,7 +114,7 @@ export const useVoting = () => {
 };
 
   try {
-    const response = await fetch('https://02dde82182ce.ngrok-free.app/drm/add/nominee', {
+    const response = await fetch('https://galabackend.onrender.com/drm/add/nominee', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -134,7 +135,7 @@ export const useVoting = () => {
 
     setNominees(prev => ({
       ...prev,
-      [categoryId]: [...(prev[categoryId] || []), newNominee]
+      ['']: [...(prev[''] || []), newNominee]
     }));
 
     // Save to localStorage for persistence
