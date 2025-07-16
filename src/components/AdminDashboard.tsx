@@ -4,7 +4,7 @@ import {
   User, Save, X, BarChart3, TrendingUp, Clock, Award, Smartphone,
   Monitor, Tablet, RefreshCw, Activity
 } from 'lucide-react';
-import { GALA_CATEGORIES,SAMPLE_NOMINEESREF , GALA_NOMINEES,CategoryVote ,Category, Nominee, NomineeRef } from '../data/categories';
+import { CategoryVote, Category, Nominee, NomineeRef } from '../data/categories';
 import { useVoting } from '../hooks/useVoting';
 
 interface AdminDashboardProps {
@@ -12,25 +12,18 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const { nominees, addNominee, updateNominee, deleteNominee } = useVoting();
-  const [allNominees] = useState<Nominee[]>(GALA_NOMINEES);
-  const [categories] = useState<Category[]>(GALA_CATEGORIES);
-  const [NomineeRef] = useState<NomineeRef[]>(SAMPLE_NOMINEESREF);
-  const [selectedCategory, setSelectedCategory] = useState<CategoryVote[]>([]);
+  const { categories, nominees, addNominee, updateNominee, deleteNominee, loading } = useVoting();
   const [selectedCategories, setSelectedCategories] = useState<string>('');
   const [showAddNominee, setShowAddNominee] = useState(false);
   const [showStats, setShowStats] = useState(true);
+  
+  // Derive allNominees from the nominees map
+  const allNominees = Object.values(nominees).flat();
+  
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-  const categoryId = e.target.value;setSelectedCategories(categoryId);
-  // const allTotalVotes = categories.reduce((sum, category) => sum + category.totalVotes, 0);
-
-
-
-  // Only add if not already selected
-  if (categoryId && !selectedCategory.some(c => c.categId === categoryId)) {
-    setSelectedCategory(prev => [...prev, { categId: categoryId, vote: 0 }]);
-  }
-};
+    const categoryId = e.target.value;
+    setSelectedCategories(categoryId);
+  };
 
   const [editingNominee, setEditingNominee] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'nominees' | 'analytics'>('overview');
@@ -51,7 +44,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     photo_url: '',
     categories: []
   });
-  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   useEffect(() => {
@@ -92,37 +85,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleAddNominee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCategory || !newNominee.name.trim()) return;
+    if (!selectedCategories || !newNominee.name.trim()) return;
 
-    setLoading(true);
+    setActionLoading(true);
     try {
       addNominee({
-        nomId: `nominee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: newNominee.name.trim(),
         photo: newNominee.photo_url.trim() || undefined,
-        categories: [{categId:selectedCategories,vote:0}]
+        categories: [{categId: selectedCategories, vote: 0}]
       });
 
-      setNewNominee({ name: '', photo_url: '', categories:[] });
+      setNewNominee({ name: '', photo_url: '', categories: [] });
       setShowAddNominee(false);
     } catch (error) {
       console.error('Error adding nominee:', error);
       alert('Error adding nominee. Please try again.');
-    } 
-
- finally {
-      setLoading(false);
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleEditNominee = async (nomineeId: string) => {
     if (!editNomineeData.name.trim()) return;
 
-    setLoading(true);
+    setActionLoading(true);
     try {
       updateNominee(nomineeId, {
         name: editNomineeData.name.trim(),
-        // description: editNomineeData.description.trim() || undefined,
         photo: editNomineeData.photo_url.trim() || undefined,
       });
 
@@ -131,7 +120,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       console.error('Error updating nominee:', error);
       alert('Error updating nominee. Please try again.');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -140,13 +129,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setEditNomineeData({
       name: nominee.name,
       photo_url: nominee.photo || '',
-      categories: []
+      categories: nominee.categories
     });
   };
 
   const cancelEditing = () => {
     setEditingNominee(null);
-    setEditNomineeData({ name: '', photo_url: '', categories:[] });
+    setEditNomineeData({ name: '', photo_url: '', categories: [] });
   };
 
   const handleDeleteNominee = async (nomineeId: string) => {
@@ -159,8 +148,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       alert('Error deleting nominee. Please try again.');
     }
   };
-  const filteredNominees = selectedCategories? allNominees.filter(nominee => nominee.categories.some(cat => cat.categId === selectedCategories)) : allNominees;
-  const allTotalVotes = categories.reduce((sum, category) => sum + category.totalVotes, 0,);
+  
+  const filteredNominees = selectedCategories 
+    ? allNominees.filter(nominee => nominee.categories.some(cat => cat.categId === selectedCategories)) 
+    : allNominees;
+  const allTotalVotes = categories.reduce((sum, category) => sum + category.totalVotes, 0);
 
   const getCategoryVotes = (categoryId: string) => {
     const savedVotes = localStorage.getItem('dac_all_votes');
@@ -486,10 +478,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                       <button
                         type="submit"
-                        disabled={loading}
+                        disabled={actionLoading}
                         className="bg-gradient-to-r from-orange-400 to-yellow-400 text-white px-6 py-3 rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all disabled:opacity-50 shadow-lg text-sm sm:text-base"
                       >
-                        {loading ? 'Adding...' : 'Add Nominee'}
+                        {actionLoading ? 'Adding...' : 'Add Nominee'}
                       </button>
                       <button
                         type="button"
@@ -535,7 +527,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleEditNominee(nominee.nomId)}
-                              disabled={loading}
+                              disabled={actionLoading}
                               className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-all flex items-center space-x-1 text-sm"
                             >
                               <Save className="w-4 h-4" />
@@ -573,11 +565,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{nominee.name}</h4>
-                              {/* {nominee.description && (
-                                <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{nominee.description}</p>
-                              )} */}
                               <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full inline-block mt-1">
-                                {/* {categories.find(c => c.categoryId === selectedCategory.)?.title} */}
+                                {categories.find(c => c.categoryId === selectedCategories)?.title || 'Multiple Categories'}
                               </span>
                             </div>
                           </div>
@@ -605,7 +594,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <div className="text-center py-8 text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-base sm:text-lg">
-                      {selectedCategory 
+                      {selectedCategories 
                         ? 'No nominees in this category yet.' 
                         : 'No nominees added yet.'
                       }

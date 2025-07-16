@@ -83,9 +83,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, nominees, onVote,
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                         <div className="flex-shrink-0">
-                          {nominee.name ? (
+                          {nominee.photo ? (
                             <img 
-                              src={nominee.id} 
+                              src={nominee.photo} 
                               alt={nominee.name}
                               className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-3 border-white shadow-lg"
                               onError={(e) => {
@@ -95,7 +95,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, nominees, onVote,
                               }}
                             />
                           ) : null}
-                          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center text-white shadow-lg ${nominee.id ? 'hidden' : ''}`}>
+                          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center text-white shadow-lg ${nominee.photo ? 'hidden' : ''}`}>
                             <User className="w-6 h-6 sm:w-7 sm:h-7" />
                           </div>
                         </div>
@@ -103,11 +103,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, nominees, onVote,
                           <h4 className="font-bold text-gray-800 text-sm sm:text-base leading-tight">
                             {nominee.name}
                           </h4>
-                          {/* {nominee.description && (
-                            <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-3 leading-relaxed">
-                              {nominee.description}
-                            </p>
-                          )} */}
                         </div>
                       </div>
                       <button

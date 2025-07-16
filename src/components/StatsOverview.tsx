@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Users, Vote } from 'lucide-react';
-import { GALA_CATEGORIES } from '../data/categories';
+import { useVoting } from '../hooks/useVoting';
 
 const StatsOverview: React.FC = () => {
+  const { categories, nominees } = useVoting();
   const [stats, setStats] = useState({
     categories: 0,
     nominees: 0,
@@ -11,31 +12,29 @@ const StatsOverview: React.FC = () => {
 
   useEffect(() => {
     // Calculate stats from local data
-    const categories = GALA_CATEGORIES.length;
+    const categoriesCount = categories.length;
     
-    // Get nominees from localStorage
-    const savedNominees = localStorage.getItem('dac_nominees');
-    const nominees = savedNominees ? JSON.parse(savedNominees).length : 0;
+    // Calculate nominees from the nominees map
+    const nomineesCount = Object.values(nominees).flat().length;
     
     // Get votes from localStorage
     const savedVotes = localStorage.getItem('dac_all_votes');
-    const votes = savedVotes ? JSON.parse(savedVotes).length : 0;
+    const votesCount = savedVotes ? JSON.parse(savedVotes).length : 0;
 
-    setStats({ categories, nominees, votes });
+    setStats({ categories: categoriesCount, nominees: nomineesCount, votes: votesCount });
 
     // Update stats periodically to reflect changes
     const interval = setInterval(() => {
-      const savedNominees = localStorage.getItem('dac_nominees');
-      const nominees = savedNominees ? JSON.parse(savedNominees).length : 0;
+      const nomineesCount = Object.values(nominees).flat().length;
       
       const savedVotes = localStorage.getItem('dac_all_votes');
-      const votes = savedVotes ? JSON.parse(savedVotes).length : 0;
+      const votesCount = savedVotes ? JSON.parse(savedVotes).length : 0;
 
-      setStats({ categories, nominees, votes });
+      setStats({ categories: categoriesCount, nominees: nomineesCount, votes: votesCount });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [categories, nominees]);
 
   return (
     <div className="bg-white py-8 sm:py-12">
