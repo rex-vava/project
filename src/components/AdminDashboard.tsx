@@ -491,7 +491,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </div>
                 <div className="text-center bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-200">
                   <Users className="w-8 h-8 mx-auto mb-2 text-purple-500" />
-                  <div className="text-2xl font-bold text-purple-600">{stats.categoriesWithVotes}</div>
+                  <div className="text-2xl font-bold text-purple-600">{category.}</div>
                   <div className="text-xs text-gray-600">Active Categories</div>
                 </div>
                 <div className="text-center bg-gradient-to-br from-orange-50 to-yellow-50 p-4 rounded-xl border border-orange-200">
