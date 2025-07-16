@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Edit, Trash2, Users, Trophy, Settings, LogOut, Eye, EyeOff, 
   User, Save, X, BarChart3, TrendingUp, Clock, Award, Smartphone,
-  Monitor, Tablet, RefreshCw, Activity
+  Monitor, Tablet, RefreshCw, Activity, Crown, Star, PieChart
 } from 'lucide-react';
 import { CategoryVote, Category, Nominee, NomineeRef } from '../data/categories';
 import { useVoting } from '../hooks/useVoting';
@@ -26,7 +26,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const [editingNominee, setEditingNominee] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'nominees' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'nominees' | 'analytics' | 'voting-stats'>('overview');
   const [stats, setStats] = useState({ 
     totalVotes: 0, 
     categoriesWithVotes: 0, 
@@ -34,6 +34,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     recentVotes: 0,
     deviceBreakdown: { mobile: 0, desktop: 0, tablet: 0 }
   });
+  const [votingStats, setVotingStats] = useState<Record<string, { nomineeId: string; nomineeName: string; votes: number; }[]>>({});
+  const [leadingNominees, setLeadingNominees] = useState<Record<string, { nomineeId: string; nomineeName: string; votes: number; }>>({});
   const [newNominee, setNewNominee] = useState({
     name: '',
     photo_url: '',
@@ -49,8 +51,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   useEffect(() => {
     updateStats();
+    updateVotingStats();
     const interval = setInterval(() => {
       updateStats();
+      updateVotingStats();
       setLastUpdate(new Date());
     }, 2000); // Update every 2 seconds for real-time feel
     
@@ -81,6 +85,50 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     };
     
     setStats({ totalVotes, categoriesWithVotes, totalNominees, recentVotes, deviceBreakdown });
+  };
+
+  const updateVotingStats = () => {
+    const savedVotes = localStorage.getItem('dac_all_votes');
+    const votes = savedVotes ? JSON.parse(savedVotes) : [];
+    
+    // Group votes by category and nominee
+    const categoryStats: Record<string, Record<string, number>> = {};
+    const newVotingStats: Record<string, { nomineeId: string; nomineeName: string; votes: number; }[]> = {};
+    const newLeadingNominees: Record<string, { nomineeId: string; nomineeName: string; votes: number; }> = {};
+    
+    // Initialize category stats
+    categories.forEach(category => {
+      categoryStats[category.categoryId] = {};
+      category.nominees.forEach(nominee => {
+        categoryStats[category.categoryId][nominee.id] = 0;
+      });
+    });
+    
+    // Count votes
+    votes.forEach((vote: any) => {
+      if (categoryStats[vote.category_id] && categoryStats[vote.category_id][vote.nominee_id] !== undefined) {
+        categoryStats[vote.category_id][vote.nominee_id]++;
+      }
+    });
+    
+    // Convert to sorted arrays and find leaders
+    categories.forEach(category => {
+      const categoryVotes = category.nominees.map(nominee => ({
+        nomineeId: nominee.id,
+        nomineeName: nominee.name,
+        votes: categoryStats[category.categoryId][nominee.id] || 0
+      })).sort((a, b) => b.votes - a.votes);
+      
+      newVotingStats[category.categoryId] = categoryVotes;
+      
+      // Set leading nominee (first in sorted array)
+      if (categoryVotes.length > 0 && categoryVotes[0].votes > 0) {
+        newLeadingNominees[category.categoryId] = categoryVotes[0];
+      }
+    });
+    
+    setVotingStats(newVotingStats);
+    setLeadingNominees(newLeadingNominees);
   };
 
   const handleAddNominee = async (e: React.FormEvent) => {
@@ -197,36 +245,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           <div className="flex space-x-1 mt-3 sm:mt-4 bg-white/10 rounded-xl p-1">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all ${
                 activeTab === 'overview' 
                   ? 'bg-white/20 text-white' 
                   : 'text-yellow-100 hover:bg-white/10'
               }`}
             >
-              <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mx-auto mb-1" />
+              <BarChart3 className="w-3 h-3 mx-auto mb-1" />
               Overview
             </button>
             <button
               onClick={() => setActiveTab('nominees')}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all ${
                 activeTab === 'nominees' 
                   ? 'bg-white/20 text-white' 
                   : 'text-yellow-100 hover:bg-white/10'
               }`}
             >
-              <Users className="w-3 h-3 sm:w-4 sm:h-4 mx-auto mb-1" />
+              <Users className="w-3 h-3 mx-auto mb-1" />
               Nominees
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all ${
                 activeTab === 'analytics' 
                   ? 'bg-white/20 text-white' 
                   : 'text-yellow-100 hover:bg-white/10'
               }`}
             >
-              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mx-auto mb-1" />
+              <TrendingUp className="w-3 h-3 mx-auto mb-1" />
               Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('voting-stats')}
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'voting-stats' 
+                  ? 'bg-white/20 text-white' 
+                  : 'text-yellow-100 hover:bg-white/10'
+              }`}
+            >
+              <PieChart className="w-3 h-3 mx-auto mb-1" />
+              Voting
             </button>
           </div>
         </div>
@@ -307,8 +366,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             <div className="text-lg sm:text-xl font-bold text-green-600">{category.totalVotes}</div>
                             <div className="text-xs text-gray-500">Votes</div>
                           </div>
+                          {leadingNominees[category.categoryId] && (
+                            <div className="ml-2">
+                              <Crown className="w-4 h-4 text-yellow-500" />
+                            </div>
+                          )}
                         </div>
                       </div>
+                      {leadingNominees[category.categoryId] && (
+                        <div className="mt-2 text-xs text-gray-600 bg-yellow-50 px-2 py-1 rounded-lg">
+                          <span className="font-medium">Leading: </span>
+                          {leadingNominees[category.categoryId].nomineeName} 
+                          <span className="text-yellow-600 font-bold ml-1">
+                            ({leadingNominees[category.categoryId].votes} votes)
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -375,6 +448,132 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Voting Statistics Tab */}
+        {activeTab === 'voting-stats' && (
+          <div className="space-y-4 sm:space-y-6">
+            {/* Overall Voting Summary */}
+            <div className="bg-white rounded-2xl shadow-lg border border-orange-200 p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <PieChart className="w-5 h-5 mr-2 text-orange-500" />
+                Voting Statistics Overview
+              </h3>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="text-center bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                  <Trophy className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                  <div className="text-2xl font-bold text-green-600">{Object.keys(leadingNominees).length}</div>
+                  <div className="text-xs text-gray-600">Categories with Leaders</div>
+                </div>
+                <div className="text-center bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-200">
+                  <Star className="w-8 h-8 mx-auto mb-2 text-blue-500" />
+                  <div className="text-2xl font-bold text-blue-600">{allTotalVotes}</div>
+                  <div className="text-xs text-gray-600">Total Votes Cast</div>
+                </div>
+                <div className="text-center bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-200">
+                  <Users className="w-8 h-8 mx-auto mb-2 text-purple-500" />
+                  <div className="text-2xl font-bold text-purple-600">{stats.categoriesWithVotes}</div>
+                  <div className="text-xs text-gray-600">Active Categories</div>
+                </div>
+                <div className="text-center bg-gradient-to-br from-orange-50 to-yellow-50 p-4 rounded-xl border border-orange-200">
+                  <Activity className="w-8 h-8 mx-auto mb-2 text-orange-500" />
+                  <div className="text-2xl font-bold text-orange-600">{stats.recentVotes}</div>
+                  <div className="text-xs text-gray-600">Recent Votes (5m)</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Category-wise Voting Results */}
+            <div className="space-y-4">
+              {categories.map((category) => {
+                const categoryVotingStats = votingStats[category.categoryId] || [];
+                const totalCategoryVotes = categoryVotingStats.reduce((sum, nominee) => sum + nominee.votes, 0);
+                const leader = leadingNominees[category.categoryId];
+                
+                return (
+                  <div key={category.categoryId} className="bg-white rounded-2xl shadow-lg border border-orange-200 p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{category.icon}</span>
+                        <div>
+                          <h4 className="text-lg font-bold text-gray-800">{category.title}</h4>
+                          {category.isAward && (
+                            <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Special Award</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-blue-600">{totalCategoryVotes}</div>
+                        <div className="text-xs text-gray-500">Total Votes</div>
+                      </div>
+                    </div>
+
+                    {leader && (
+                      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-3 mb-4">
+                        <div className="flex items-center space-x-2">
+                          <Crown className="w-5 h-5 text-yellow-500" />
+                          <span className="text-sm font-medium text-gray-700">Current Leader:</span>
+                          <span className="font-bold text-gray-800">{leader.nomineeName}</span>
+                          <span className="bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full text-xs font-bold">
+                            {leader.votes} votes ({totalCategoryVotes > 0 ? Math.round((leader.votes / totalCategoryVotes) * 100) : 0}%)
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      {categoryVotingStats.length > 0 ? (
+                        categoryVotingStats.map((nominee, index) => {
+                          const percentage = totalCategoryVotes > 0 ? (nominee.votes / totalCategoryVotes) * 100 : 0;
+                          const isLeader = leader && leader.nomineeId === nominee.nomineeId;
+                          
+                          return (
+                            <div key={nominee.nomineeId} className={`flex items-center justify-between p-3 rounded-xl border ${
+                              isLeader 
+                                ? 'bg-yellow-50 border-yellow-200' 
+                                : 'bg-gray-50 border-gray-200'
+                            }`}>
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                                  isLeader ? 'bg-yellow-500' : 'bg-gray-400'
+                                }`}>
+                                  {isLeader ? <Crown className="w-4 h-4" /> : index + 1}
+                                </div>
+                                <span className="font-medium text-gray-800">{nominee.nomineeName}</span>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <div className="w-32 bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className={`h-2 rounded-full transition-all duration-500 ${
+                                      isLeader ? 'bg-yellow-500' : 'bg-blue-500'
+                                    }`}
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                                <div className="text-right min-w-[60px]">
+                                  <div className={`text-lg font-bold ${isLeader ? 'text-yellow-600' : 'text-blue-600'}`}>
+                                    {nominee.votes}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {percentage.toFixed(1)}%
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <PieChart className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                          <p className="text-base">No votes cast yet in this category</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
