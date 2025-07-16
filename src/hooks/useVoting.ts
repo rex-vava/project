@@ -70,24 +70,7 @@ export const useVoting = () => {
         throw new Error('You have already voted in this category');
       }
 
-      // For now, just store votes locally
-      // Later this can be replaced with MongoDB API calls
-      const newVotes = {
-        ...userVotes,
-        [categoryId]: nomineeId
-      };
-
-      setUserVotes(newVotes);
-      localStorage.setItem('dac_user_votes', JSON.stringify(newVotes));
-
-      // Store vote details for future MongoDB integration
-      const voteData = {
-        voter_id: voterId,
-        category_id: categoryId,
-        nominee_id: nomineeId,
-        timestamp: new Date().toISOString()
-      };
-
+      // Submit vote to MongoDB backend
       const response = await fetch("https://galabackend.onrender.com/drm/vote", {
         method: "POST",
         headers: {
@@ -96,6 +79,7 @@ export const useVoting = () => {
         body: JSON.stringify({
           nomineeId: nomineeId,
           categoryId: categoryId,
+          voterId: voterId
         }),
       });
 
@@ -104,10 +88,14 @@ export const useVoting = () => {
         throw new Error(`Error: ${response.status} - ${errorText}`);
       }
 
-      // Save individual vote for MongoDB migration
-      const existingVotes = JSON.parse(localStorage.getItem('dac_all_votes') || '[]');
-      existingVotes.push(voteData);
-      localStorage.setItem('dac_all_votes', JSON.stringify(existingVotes));
+      // Update local user votes after successful submission
+      const newVotes = {
+        ...userVotes,
+        [categoryId]: nomineeId
+      };
+
+      setUserVotes(newVotes);
+      localStorage.setItem('dac_user_votes', JSON.stringify(newVotes));
 
       return { success: true };
     } catch (error: any) {

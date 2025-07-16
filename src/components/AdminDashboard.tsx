@@ -36,6 +36,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   });
   const [votingStats, setVotingStats] = useState<Record<string, { nomineeId: string; nomineeName: string; votes: number; }[]>>({});
   const [leadingNominees, setLeadingNominees] = useState<Record<string, { nomineeId: string; nomineeName: string; votes: number; }>>({});
+  const [votingData, setVotingData] = useState<any[]>([]);
   const [newNominee, setNewNominee] = useState({
     name: '',
     photo_url: '',
@@ -52,28 +53,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   useEffect(() => {
     updateStats();
     updateVotingStats();
+    fetchVotingData();
     const interval = setInterval(() => {
       updateStats();
       updateVotingStats();
+      fetchVotingData();
       setLastUpdate(new Date());
     }, 2000); // Update every 2 seconds for real-time feel
     
     return () => clearInterval(interval);
   }, [nominees]);
 
+  const fetchVotingData = async () => {
+    try {
+      const response = await fetch('https://galabackend.onrender.com/drm/votes');
+      if (response.ok) {
+        const data = await response.json();
+        setVotingData(data);
+      } else {
+        console.error('Failed to fetch voting data');
+      }
+    } catch (error) {
+      console.error('Error fetching voting data:', error);
+    }
+  };
+
   const updateStats = () => {
-    // Calculate real-time stats from localStorage
-    const savedVotes = localStorage.getItem('dac_all_votes');
-    const votes = savedVotes ? JSON.parse(savedVotes) : [];
-    const totalVotes = votes.length;
+    // Calculate real-time stats from MongoDB data
+    const totalVotes = votingData.length;
     
     // Recent votes (last 5 minutes)
     const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-    const recentVotes = votes.filter((vote: any) => 
-      new Date(vote.timestamp).getTime() > fiveMinutesAgo
+    const recentVotes = votingData.filter((vote: any) => 
+      new Date(vote.createdAt || vote.timestamp).getTime() > fiveMinutesAgo
     ).length;
     
-    const categoriesWithVotes = new Set(votes.map((vote: any) => vote.category_id)).size;
+    const categoriesWithVotes = new Set(votingData.map((vote: any) => vote.categoryId || vote.category_id)).size;
     const totalNominees = Object.values(nominees).reduce((total, categoryNominees) => total + categoryNominees.length, 0);
 
     
@@ -88,8 +103,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const updateVotingStats = () => {
-    const savedVotes = localStorage.getItem('dac_all_votes');
-    const votes = savedVotes ? JSON.parse(savedVotes) : [];
+    const votes = votingData;
     
     // Group votes by category and nominee
     const categoryStats: Record<string, Record<string, number>> = {};
@@ -106,8 +120,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     
     // Count votes
     votes.forEach((vote: any) => {
-      if (categoryStats[vote.category_id] && categoryStats[vote.category_id][vote.nominee_id] !== undefined) {
-        categoryStats[vote.category_id][vote.nominee_id]++;
+      const categoryId = vote.categoryId || vote.category_id;
+      const nomineeId = vote.nomineeId || vote.nominee_id;
+      
+      if (categoryStats[categoryId] && categoryStats[categoryId][nomineeId] !== undefined) {
+        categoryStats[categoryId][nomineeId]++;
       }
     });
     
@@ -203,9 +220,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const allTotalVotes = categories.reduce((sum, category) => sum + category.totalVotes, 0);
 
   const getCategoryVotes = (categoryId: string) => {
-    const savedVotes = localStorage.getItem('dac_all_votes');
-    const votes = savedVotes ? JSON.parse(savedVotes) : [];
-    return votes.filter((vote: any) => vote.category_id === categoryId).length;
+    return votingData.filter((vote: any) => 
+      (vote.categoryId || vote.category_id) === categoryId
+    ).length;
   };
 
   return (
